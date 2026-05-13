@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate project metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore NuGet packages
+        run: dotnet restore
+
+      - name: Validate manifest JSON
+        shell: bash
+        run: |
+          python3 -m json.tool manifest.json > /tmp/manifest.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("manifest.json").read_text())
+          required = [
+              "Name",
+              "Author",
+              "Version",
+              "Description",
+              "UniqueID",
+              "EntryDll",
+              "MinimumApiVersion",
+          ]
+          missing = [key for key in required if not manifest.get(key)]
+          if missing:
+              raise SystemExit(f"manifest.json is missing required fields: {', '.join(missing)}")
+          PY
