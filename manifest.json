@@ -1,0 +1,10 @@
+{
+  "Name": "Stardew Valley Mod",
+  "Author": "felipedidio",
+  "Version": "1.0.0",
+  "Description": "A starter SMAPI mod for Stardew Valley.",
+  "UniqueID": "felipedidio.StardewValleyMod",
+  "EntryDll": "StardewValleyMod.dll",
+  "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": []
+}
