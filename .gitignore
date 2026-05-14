@@ -7,3 +7,6 @@ TestResults/
 *.user
 *.suo
 *.log
+
+StardewValley.cs
+Hashing.cs

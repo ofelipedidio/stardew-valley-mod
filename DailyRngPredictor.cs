@@ -1,6 +1,8 @@
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Extensions;
+using StardewValley.Locations;
+using StardewValley.Objects;
 
 namespace StardewValleyMod;
 
@@ -124,6 +126,8 @@ internal sealed class DailyRngPredictor
                 $"Friendship mail RNG consumed: {consumedFriendshipMailRng}");
         }
 
+        this.ReplayFarmerDayUpdateRandomDraws(rng, debugLines, includeDebugLines);
+
         int luckRoll = rng.Next(-100, 101);
         double luck = Math.Min(0.10000000149011612, luckRoll / 1000.0);
 
@@ -146,6 +150,63 @@ internal sealed class DailyRngPredictor
             count,
             luck,
             debugLines);
+    }
+
+    private void ReplayFarmerDayUpdateRandomDraws(Random rng, List<string> debugLines, bool includeDebugLines)
+    {
+        Farmer player = Game1.player;
+
+        double rarecrowSocietyRoll = rng.NextDouble();
+        this.AddDebug(
+            debugLines,
+            includeDebugLines,
+            $"Farmer.dayupdate RarecrowSociety roll consumed: {rarecrowSocietyRoll:0.#################}");
+
+        if (player.shirtItem.Value is null || player.pantsItem.Value is null)
+        {
+            this.AddDebug(
+                debugLines,
+                includeDebugLines,
+                "Farmer.dayupdate cursed mannequin rolls skipped: player is missing shirt or pants item.");
+            return;
+        }
+
+        if (player.currentLocation is not (FarmHouse or IslandFarmHouse or Shed))
+        {
+            this.AddDebug(
+                debugLines,
+                includeDebugLines,
+                $"Farmer.dayupdate cursed mannequin rolls skipped: current location is {player.currentLocation?.NameOrUniqueName ?? "(none)"}.");
+            return;
+        }
+
+        int cursedMannequinRollCount = 0;
+        foreach (StardewValley.Object obj in player.currentLocation.netObjects.Values)
+        {
+            if (obj is not Mannequin mannequin)
+                continue;
+
+            bool isCursed =
+                DataLoader.Mannequins(Game1.content).TryGetValue(mannequin.ItemId, out StardewValley.GameData.MannequinData? data)
+                && data?.Cursed == true;
+            if (!isCursed)
+                continue;
+
+            cursedMannequinRollCount++;
+            double roll = rng.NextDouble();
+            this.AddDebug(
+                debugLines,
+                includeDebugLines,
+                $"Farmer.dayupdate cursed mannequin roll {cursedMannequinRollCount}: {roll:0.#################}");
+        }
+
+        if (cursedMannequinRollCount == 0)
+        {
+            this.AddDebug(
+                debugLines,
+                includeDebugLines,
+                "Farmer.dayupdate cursed mannequin rolls consumed: 0");
+        }
     }
 
     private void AddDebug(List<string> lines, bool includeDebugLines, params string[] values)

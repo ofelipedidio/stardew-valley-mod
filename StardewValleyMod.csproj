@@ -18,6 +18,8 @@
   <ItemGroup>
     <Compile Remove="StardewValley.cs" />
     <None Include="StardewValley.cs" />
+    <Compile Remove="Hashing.cs" />
+    <None Include="Hashing.cs" />
     <None Update="manifest.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
