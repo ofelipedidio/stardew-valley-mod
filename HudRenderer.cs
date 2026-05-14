@@ -14,9 +14,10 @@ internal sealed class HudRenderer
         SpriteFont font = Game1.smallFont;
         string[] lines =
         {
-            "Next RNG",
+            "Next Day RNG",
             $"Steps: {prediction.StepsTaken}",
             $"Seed: {prediction.Seed}",
+            $"Skip day: {prediction.NextDayOfMonth}",
             $"Dish: {prediction.DishName} x{prediction.DishQuantity}",
             $"Luck: {prediction.LuckLabel}"
         };

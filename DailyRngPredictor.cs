@@ -18,36 +18,41 @@ internal sealed class DailyRngPredictor
             return DailyPrediction.Unavailable("Game1.netWorldState is unavailable.");
 
         ulong saveId = Game1.uniqueIDForThisGame;
+        ulong seedSaveComponent = saveId / 100UL;
         uint currentDaysPlayed = Game1.stats.DaysPlayed;
-        uint daysPlayedForSeed = currentDaysPlayed + 1;
+        uint nextDaysPlayed = currentDaysPlayed + 1;
         uint currentSteps = Game1.stats.StepsTaken;
         int currentDayOfMonth = Game1.dayOfMonth;
+        int nextDayOfMonth = currentDayOfMonth + 1;
+        if (nextDayOfMonth > 28)
+            nextDayOfMonth = 1;
+
         List<string> debugLines = includeDebugLines ? new List<string>() : new List<string>(capacity: 0);
 
         int seed = Utility.CreateRandomSeed(
-            saveId / 100.0,
-            daysPlayedForSeed * 10.0 + 1.0,
-            currentSteps,
-            0,
-            0);
+            seedSaveComponent,
+            nextDaysPlayed * 10.0 + 1.0,
+            currentSteps);
 
-        Random rng = Utility.CreateRandom(seed, 0, 0, 0, 0);
+        Random rng = Utility.CreateRandom(seed);
 
         this.AddDebug(
             debugLines,
             includeDebugLines,
             $"SaveId: {saveId}",
+            $"SaveId / 100UL: {seedSaveComponent}",
+            $"Current dayOfMonth: {currentDayOfMonth}",
+            $"Next dayOfMonth used for skip count: {nextDayOfMonth}",
             $"Current DaysPlayed: {currentDaysPlayed}",
-            $"DaysPlayed used for seed: {daysPlayedForSeed}",
-            $"Current dayOfMonth skip count: {currentDayOfMonth}",
+            $"Next DaysPlayed used for seed: {nextDaysPlayed}",
             $"StepsTaken: {currentSteps}",
             $"Seed: {seed}");
 
-        for (int i = 0; i < currentDayOfMonth; i++)
+        for (int i = 0; i < nextDayOfMonth; i++)
             rng.Next();
 
         if (includeDebugLines)
-            debugLines.Add($"Skip draws: {currentDayOfMonth}");
+            debugLines.Add($"Skip draws: {nextDayOfMonth}");
 
         string itemId;
         bool forbidden;
@@ -131,7 +136,10 @@ internal sealed class DailyRngPredictor
 
         return DailyPrediction.Available(
             seed,
-            daysPlayedForSeed,
+            nextDayOfMonth,
+            currentDaysPlayed,
+            nextDaysPlayed,
+            seedSaveComponent,
             currentSteps,
             itemId,
             dishName,

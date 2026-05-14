@@ -11,6 +11,7 @@ internal sealed class ModEntry : Mod
     private HudRenderer? hudRenderer;
     private DailyPrediction? cachedPrediction;
     private PredictionInputs? cachedInputs;
+    private DailyPrediction? lastPreSleepPrediction;
     private string? lastWarningReason;
 
     /// <summary>The mod entry point, called after the mod is first loaded.</summary>
@@ -21,6 +22,7 @@ internal sealed class ModEntry : Mod
         this.hudRenderer = new HudRenderer();
 
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
+        helper.Events.GameLoop.DayEnding += this.OnDayEnding;
         helper.Events.GameLoop.DayStarted += this.OnDayStarted;
         helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
@@ -35,28 +37,53 @@ internal sealed class ModEntry : Mod
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
     {
         DailyPrediction prediction = this.RefreshPrediction(force: true);
+        string actualDishItemId = Game1.dishOfTheDay?.ItemId ?? "";
+        string actualDishName = Game1.dishOfTheDay?.DisplayName ?? "(none)";
+        int actualDishQuantity = Game1.dishOfTheDay?.Stack ?? 0;
+        double actualLuck = Game1.player.team.sharedDailyLuck.Value;
 
         this.Monitor.Log(
-            $"[Daily RNG] Save loaded. SaveId={Game1.uniqueIDForThisGame}, DaysPlayed={Game1.stats.DaysPlayed}, StepsTaken={Game1.stats.StepsTaken}, Date={Game1.currentSeason} {Game1.dayOfMonth}, year {Game1.year}.",
+            $"[Daily RNG] Save loaded. SaveId={Game1.uniqueIDForThisGame}, SaveId/100UL={Game1.uniqueIDForThisGame / 100UL}, DaysPlayed={Game1.stats.DaysPlayed}, StepsTaken={Game1.stats.StepsTaken}, Date={Game1.currentSeason} {Game1.dayOfMonth}, year {Game1.year}.",
+            LogLevel.Info);
+
+        this.Monitor.Log(
+            $"[Daily RNG] Current actual: Dish={actualDishName} x{actualDishQuantity} ({actualDishItemId}), Luck={DailyPrediction.FormatLuck(actualLuck)}.",
             LogLevel.Info);
 
         if (prediction.IsAvailable)
         {
             this.Monitor.Log(
-                $"[Daily RNG] Initial prediction: Seed={prediction.Seed}, Dish={prediction.DishName} x{prediction.DishQuantity}, Luck={prediction.LuckLabel}.",
+                $"[Daily RNG] Next-day prediction: Seed={prediction.Seed}, SkipDay={prediction.NextDayOfMonth}, Dish={prediction.DishName} x{prediction.DishQuantity}, Luck={prediction.LuckLabel}.",
                 LogLevel.Info);
+        }
+    }
+
+    private void OnDayEnding(object? sender, DayEndingEventArgs e)
+    {
+        DailyPrediction prediction = this.RefreshPrediction(force: true);
+        this.lastPreSleepPrediction = prediction.IsAvailable ? prediction : null;
+
+        if (prediction.IsAvailable)
+        {
+            this.Monitor.Log(
+                $"[Daily RNG] Locked pre-sleep prediction: Seed={prediction.Seed}, SaveId/100UL={prediction.SeedSaveComponent}, CurrentDaysPlayed={prediction.CurrentDaysPlayed}, NextDaysPlayed={prediction.NextDaysPlayed}, StepsTaken={prediction.StepsTaken}, SkipDay={prediction.NextDayOfMonth}, Dish={prediction.DishName} x{prediction.DishQuantity}, Luck={prediction.LuckLabel}.",
+                LogLevel.Info);
+        }
+        else
+        {
+            this.Monitor.Log($"[Daily RNG] Could not lock pre-sleep prediction: {prediction.UnavailableReason}", LogLevel.Warn);
         }
     }
 
     private void OnDayStarted(object? sender, DayStartedEventArgs e)
     {
-        DailyPrediction? previousPrediction = this.cachedPrediction?.IsAvailable == true
-            ? this.cachedPrediction
+        DailyPrediction? previousPrediction = this.lastPreSleepPrediction?.IsAvailable == true
+            ? this.lastPreSleepPrediction
             : null;
 
         if (previousPrediction is null)
         {
-            this.Monitor.Log("[Daily RNG] Day started. No cached pre-sleep prediction was available for comparison.", LogLevel.Info);
+            this.Monitor.Log("[Daily RNG] Day started. No DayEnding pre-sleep prediction was available for comparison; this is expected on save load or first morning.", LogLevel.Info);
             this.RefreshPrediction(force: true);
             return;
         }
@@ -82,6 +109,7 @@ internal sealed class ModEntry : Mod
                 this.Monitor.Log($"[Daily RNG] {line}", LogLevel.Info);
         }
 
+        this.lastPreSleepPrediction = null;
         this.RefreshPrediction(force: true);
     }
 
@@ -89,6 +117,7 @@ internal sealed class ModEntry : Mod
     {
         this.cachedPrediction = null;
         this.cachedInputs = null;
+        this.lastPreSleepPrediction = null;
         this.lastWarningReason = null;
     }
 
@@ -130,6 +159,9 @@ internal sealed class ModEntry : Mod
             this.Monitor.Log($"Unavailable: {prediction.UnavailableReason}", LogLevel.Info);
             return;
         }
+
+        if (this.lastPreSleepPrediction is null)
+            this.Monitor.Log("No DayEnding pre-sleep snapshot is currently locked for actual comparison.", LogLevel.Info);
 
         foreach (string line in prediction.DebugLines)
             this.Monitor.Log(line, LogLevel.Info);

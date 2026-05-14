@@ -4,7 +4,10 @@ internal sealed class DailyPrediction
 {
     private DailyPrediction(
         int seed,
-        uint daysPlayedForSeed,
+        int nextDayOfMonth,
+        uint currentDaysPlayed,
+        uint nextDaysPlayed,
+        ulong seedSaveComponent,
         uint stepsTaken,
         string dishItemId,
         string dishName,
@@ -15,7 +18,10 @@ internal sealed class DailyPrediction
         string unavailableReason)
     {
         this.Seed = seed;
-        this.DaysPlayedForSeed = daysPlayedForSeed;
+        this.NextDayOfMonth = nextDayOfMonth;
+        this.CurrentDaysPlayed = currentDaysPlayed;
+        this.NextDaysPlayed = nextDaysPlayed;
+        this.SeedSaveComponent = seedSaveComponent;
         this.StepsTaken = stepsTaken;
         this.DishItemId = dishItemId;
         this.DishName = dishName;
@@ -29,7 +35,13 @@ internal sealed class DailyPrediction
 
     public int Seed { get; }
 
-    public uint DaysPlayedForSeed { get; }
+    public int NextDayOfMonth { get; }
+
+    public uint CurrentDaysPlayed { get; }
+
+    public uint NextDaysPlayed { get; }
+
+    public ulong SeedSaveComponent { get; }
 
     public uint StepsTaken { get; }
 
@@ -51,7 +63,10 @@ internal sealed class DailyPrediction
 
     public static DailyPrediction Available(
         int seed,
-        uint daysPlayedForSeed,
+        int nextDayOfMonth,
+        uint currentDaysPlayed,
+        uint nextDaysPlayed,
+        ulong seedSaveComponent,
         uint stepsTaken,
         string dishItemId,
         string dishName,
@@ -61,7 +76,10 @@ internal sealed class DailyPrediction
     {
         return new DailyPrediction(
             seed,
-            daysPlayedForSeed,
+            nextDayOfMonth,
+            currentDaysPlayed,
+            nextDaysPlayed,
+            seedSaveComponent,
             stepsTaken,
             dishItemId,
             dishName,
@@ -76,7 +94,10 @@ internal sealed class DailyPrediction
     {
         return new DailyPrediction(
             seed: 0,
-            daysPlayedForSeed: 0,
+            nextDayOfMonth: 0,
+            currentDaysPlayed: 0,
+            nextDaysPlayed: 0,
+            seedSaveComponent: 0,
             stepsTaken: 0,
             dishItemId: "",
             dishName: "",
